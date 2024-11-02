@@ -313,6 +313,13 @@ class Params4bit(torch.nn.Parameter):
 
     def cpu(self, non_blocking: bool = False):
         return self.to(device="cpu", non_blocking=non_blocking)
+    
+    def npu(self, device: Optional[Union[int, device, str]] = None, non_blocking: bool = False):
+        # `torch.Tensor.to(<int num>)` is not supported by `torch_npu` (see this [issue](https://github.com/Ascend/pytorch/issues/16)).
+        if isinstance(device, int):
+            device = f"npu:{device}"
+        return self.to(device="npu" if device is None else device, non_blocking=non_blocking)
+
 
     @overload
     def to(
@@ -331,7 +338,7 @@ class Params4bit(torch.nn.Parameter):
     def to(self, *args, **kwargs):
         device, dtype, non_blocking, convert_to_format = torch._C._nn._parse_to(*args, **kwargs)
 
-        if device is not None and device.type in ["cuda", "cpu"] and not self.bnb_quantized:
+        if device is not None and device.type in ["cuda", "cpu", "npu"] and not self.bnb_quantized:
             return self._quantize(device)
         else:
             if self.quant_state is not None:
@@ -489,7 +496,7 @@ class Linear4bit(nn.Linear):
                 self.weight.quant_state = self.quant_state
             else:
                 print(
-                    "FP4 quantization state not initialized. Please call .cuda() or .to(device) on the LinearFP4 layer first.",
+                    "FP4 quantization state not initialized. Please call .cuda(), .npu() or .to(device) on the LinearFP4 layer first.",
                 )
         if not self.compute_type_is_set:
             self.set_compute_type(x)

@@ -8,6 +8,7 @@ from .base import Backend
 
 
 class XPUBackend(Backend):
+
     def double_quant(
         self,
         A: torch.Tensor,
